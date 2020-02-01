@@ -1,12 +1,12 @@
 mqtt:
-  hostname: 192.168.1.38
+  hostname: 127.0.0.1
   port: 1883
-  user: mqtt
-  password: A8404880+a
-device_name: Vero4K
-client_id: osmc1
+  user:
+  password:
+device_name: device
+client_id: client1
 timezone: Europe/Moscow
 update_interval: 300
-manufacturer: Vero
-model: Vero4K
+manufacturer: manufacturer
+model: model
 logging_level: INFO
