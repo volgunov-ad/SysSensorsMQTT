@@ -1,0 +1,10 @@
+[Unit]
+Description=SysSensorsMQTT
+
+[Service]
+Type=idle
+WorkingDirectory=/home/osmc/SysSensorsMQTT
+ExecStart=/home/osmc/SysSensorsMQTT/sys_sensors_daemon.py
+
+[Install]
+WantedBy=default.target
