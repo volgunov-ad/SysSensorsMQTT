@@ -15,12 +15,14 @@ the client continues to try connect every minute.
 
 The client logs 2 logs in the /var/log path: sys_sensors_mqtt_info.log and sys_sensors_mqtt_error.log.
 
+Tested only on Vero 4K.
+
 <h3>INSTALLATION</h3>
 
 * Install pip:
   * sudo apt-get install python3-pip
 * Install additional packages:
-  * sudo apt-get install build-essential
+  * sudo apt-get install gcc python3-dev (maybe build-essential)
   * sudo pip3 install setuptools
   * sudo pip3 install pyyaml
   * sudo pip3 install psutil
