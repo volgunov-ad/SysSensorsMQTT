@@ -1,13 +1,14 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
-import psutil
-import time
 import datetime as dt
-import paho.mqtt.client as mqtt
-import pytz
 import json
 from threading import Timer
+import time
+
+import paho.mqtt.client as mqtt
+import psutil
+import pytz
 
 
 class MainProcess(object):

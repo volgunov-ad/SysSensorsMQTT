@@ -3,10 +3,11 @@
 
 import logging.handlers
 import signal
-import time
-import yaml
-from pytz import timezone
 import sys
+import time
+
+from pytz import timezone
+import yaml
 
 from sys_sensors_mqtt import MainProcess
 
