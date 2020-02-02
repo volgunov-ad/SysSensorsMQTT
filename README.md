@@ -1,5 +1,6 @@
 <h1>SysSensorsMQTT</h1>
 <h3>DESCRIPTION</h3>
+
 The MQTT client sends the following data to the MQTT broker with the specified frequency:
 
 * SOC temperature;
@@ -15,6 +16,7 @@ the client continues to try connect every minute.
 The client logs 2 logs in the /var/log path: sys_sensors_mqtt_info.log and sys_sensors_mqtt_error.log.
 
 <h3>INSTALLATION</h3>
+
 * Install pip:
   * sudo apt-get install python3-pip
 * Install additional packages:
@@ -32,7 +34,7 @@ The client logs 2 logs in the /var/log path: sys_sensors_mqtt_info.log and sys_s
   * nano settings.yaml
 * Edit the sys_sensors_mqtt.service file:
   * nano sys_sensors_mqtt.service
-  * indicate in the line "WorkingDirectory=/home/osmc/SysSensorsMQTT" the correct path to the newly copied files
+  * set in the line "WorkingDirectory=/home/osmc/SysSensorsMQTT" the correct path to the newly copied files
   * do the same in the line "ExecStart=/home/osmc/SysSensorsMQTT/sys_sensors_mqtt_daemon.py", leave /sys_sensors_mqtt_daemon.py
 * Transfer the service file to the UNIX system (just in case):
   * sudo dos2unix sys_sensors_mqtt_daemon.py
