@@ -25,15 +25,15 @@ The client logs 2 logs in the /var/log path: sys_sensors_mqtt_info.log and sys_s
   * sudo pip3 install paho-mqtt
   * sudo pip3 install pytz
 
-* Copy client files to the desired path, for example, / home / osmc / SysSensorsMQTT
+* Copy client files to the desired path, for example, /home/osmc/SysSensorsMQTT
 * Go to the created path:
-  * cd / home / osmc / SysSensorsMQTT
+  * cd /home/osmc/SysSensorsMQTT
 * Set the necessary settings in the settings.yaml file:
   * nano settings.yaml
 * Edit the sys_sensors_mqtt.service file:
   * nano sys_sensors_mqtt.service
-  * indicate in the line "WorkingDirectory = / home / osmc / SysSensorsMQTT" the correct path to the newly copied files
-  * do the same in the line "ExecStart = / home / osmc / SysSensorsMQTT / sys_sensors_mqtt_daemon.py", leave /sys_sensors_mqtt_daemon.py
+  * indicate in the line "WorkingDirectory=/home/osmc/SysSensorsMQTT" the correct path to the newly copied files
+  * do the same in the line "ExecStart=/home/osmc/SysSensorsMQTT/sys_sensors_mqtt_daemon.py", leave /sys_sensors_mqtt_daemon.py
 * Transfer the service file to the UNIX system (just in case):
   * sudo dos2unix sys_sensors_mqtt_daemon.py
 * Make the service file executable:
