@@ -144,23 +144,24 @@ class MainProcess(object):
             qos=1,
             retain=retain
         )
-        # Reboot switch.
-        payload = {'name': '{} reboot'.format(self.settings['device_name']),
-                   'state_topic': 'system-sensors/switch/{}/reboot'.format(self.settings['device_name']),
-                   'command_topic': 'system-sensors/switch/{}/reboot'.format(self.settings['device_name']),
-                   'icon': 'mdi:restart',
-                   'unique_id': '{}_reboot'.format(self.settings['device_name'].lower())
-                   }
-        payload.update(device_payload)
-        self.mqtt_client.publish(
-            topic='homeassistant/switch/{0}/reboot/config'.format(self.settings['device_name']),
-            payload=json.dumps(payload),
-            qos=1,
-            retain=retain
-        )
-        self.mqtt_client.publish(topic='system-sensors/switch/{}/reboot'.format(self.settings['device_name']),
-                                 payload='OFF', qos=1, retain=False)
-        # TODO: Add Shutdown switch
+        if self.settings['reboot/shutdown']:
+            # Reboot switch.
+            payload = {'name': '{} reboot'.format(self.settings['device_name']),
+                       'state_topic': 'system-sensors/switch/{}/reboot'.format(self.settings['device_name']),
+                       'command_topic': 'system-sensors/switch/{}/reboot'.format(self.settings['device_name']),
+                       'icon': 'mdi:restart',
+                       'unique_id': '{}_reboot'.format(self.settings['device_name'].lower())
+                       }
+            payload.update(device_payload)
+            self.mqtt_client.publish(
+                topic='homeassistant/switch/{0}/reboot/config'.format(self.settings['device_name']),
+                payload=json.dumps(payload),
+                qos=1,
+                retain=retain
+            )
+            self.mqtt_client.publish(topic='system-sensors/switch/{}/reboot'.format(self.settings['device_name']),
+                                     payload='OFF', qos=1, retain=False)
+            # TODO: Add Shutdown switch
 
     def mqtt_connect(self):
         con_ok = False
@@ -188,11 +189,12 @@ class MainProcess(object):
             self.mqtt_send_config()
             self.logger.debug('Sent config to MQTT broker')
             self.publish_timer.start()
-            (result, mid) = self.mqtt_client.subscribe('system-sensors/switch/{}/reboot'.format(self.settings['device_name']))
-            if result == mqtt.MQTT_ERR_SUCCESS:
-                self.logger.debug('Successfully subscribed to reboot topic')
-            else:
-                self.logger.error('Error subscribe to reboot topic')
+            if self.settings['reboot/shutdown']:
+                (result, mid) = self.mqtt_client.subscribe('system-sensors/switch/{}/reboot'.format(self.settings['device_name']))
+                if result == mqtt.MQTT_ERR_SUCCESS:
+                    self.logger.debug('Successfully subscribed to reboot topic')
+                else:
+                    self.logger.error('Error subscribe to reboot topic')
         elif rc == 1:
             self.logger.error('Connection to MQTT broker refused. Incorrect protocol version')
             self.stop()
@@ -211,7 +213,8 @@ class MainProcess(object):
     def on_disconnect(self, client, userdata, rc):
         self.logger.debug('Disconnected from MQTT broker. {}'.format(rc))
         self.publish_timer.cancel()
-        self.mqtt_client.unsubscribe('system-sensors/switch/{}/reboot'.format(self.settings['device_name']))
+        if self.settings['reboot/shutdown']:
+            self.mqtt_client.unsubscribe('system-sensors/switch/{}/reboot'.format(self.settings['device_name']))
 
     def mqtt_publish_timer(self):
         self.mqtt_update_sensors()

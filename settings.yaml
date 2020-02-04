@@ -10,3 +10,4 @@ update_interval: 300
 manufacturer: manufacturer
 model: model
 logging_level: INFO
+reboot/shutdown: False

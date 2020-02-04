@@ -92,6 +92,11 @@ class Settings(object):
             self.settings['update_interval'] = 300.
         else:
             self.settings['update_interval'] = int(self.settings['update_interval'])
+        if 'reboot/shutdown' not in self.settings:
+            self.settings['reboot/shutdown'] = False
+        else:
+            if self.settings['reboot/shutdown'] is not True:
+                self.settings['reboot/shutdown'] = False
     
     def read_settings(self):
         with open('settings.yaml') as f:
