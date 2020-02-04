@@ -41,9 +41,9 @@ Tested only on Vero 4K.
 * Transfer the service file to the UNIX system (just in case):
   * sudo dos2unix sys_sensors_mqtt_daemon.py
 * Make the service file executable:
-  * sudo chmod u + x sys_sensors_mqtt_daemon.py
+  * sudo chmod u+x sys_sensors_mqtt_daemon.py
 * Enable service:
-  * sudo cp sys_sensors_mqtt.service/etc/systemd/system
+  * sudo cp sys_sensors_mqtt.service /etc/systemd/system
   * sudo systemctl daemon-reload
   * sudo systemctl enable sys_sensors_mqtt
   * sudo systemctl start sys_sensors_mqtt
