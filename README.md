@@ -8,12 +8,14 @@ The MQTT client sends the following data to the MQTT broker with the specified f
 * percentage of memory load;
 * percent drive load.
 
+The MQTT client also receive reboot command, that reboot system. 
+
 ![lovelace card](/images/image1.png)
 
 When the client is turned on, if it does not detect the MQTT broker at the specified address,
 the client continues to try connect every minute.
 
-The client logs 2 logs in the /var/log path: sys_sensors_mqtt_info.log and sys_sensors_mqtt_error.log.
+The client logs 2 logs in the /var/log path: sys_sensors_mqtt_info.log and sys_sensors_mqtt_error.log. Logs has rotation (max 1 MB, 1 back file)
 
 Tested only on Vero 4K.
 

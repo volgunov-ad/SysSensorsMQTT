@@ -3,6 +3,7 @@
 
 import datetime as dt
 import json
+from os import system
 from threading import Timer
 import time
 
@@ -47,6 +48,7 @@ class MainProcess(object):
                                  payload=json.dumps(payload), qos=1, retain=False)
 
     def get_temp(self):
+        # TODO: Add Raspberry Pi support
         self.logger.debug('Get SOC temperature')
         temp = '-'
         temps = psutil.sensors_temperatures()
@@ -142,6 +144,23 @@ class MainProcess(object):
             qos=1,
             retain=retain
         )
+        # Reboot switch.
+        payload = {'name': '{} reboot'.format(self.settings['device_name']),
+                   'state_topic': 'system-sensors/switch/{}/reboot'.format(self.settings['device_name']),
+                   'command_topic': 'system-sensors/switch/{}/reboot'.format(self.settings['device_name']),
+                   'icon': 'mdi:restart',
+                   'unique_id': '{}_reboot'.format(self.settings['device_name'].lower())
+                   }
+        payload.update(device_payload)
+        self.mqtt_client.publish(
+            topic='homeassistant/switch/{0}/reboot/config'.format(self.settings['device_name']),
+            payload=json.dumps(payload),
+            qos=1,
+            retain=retain
+        )
+        self.mqtt_client.publish(topic='system-sensors/switch/{}/reboot'.format(self.settings['device_name']),
+                                 payload='OFF', qos=1, retain=False)
+        # TODO: Add Shutdown switch
 
     def mqtt_connect(self):
         con_ok = False
@@ -156,11 +175,24 @@ class MainProcess(object):
                 time.sleep(60)
                 self.logger.debug('Reconnect to MQTT broker')
 
+    def on_message(self, client, userdata, message):
+        self.logger.debug('Message received: {} = {}'.format(message.topic, message.payload))
+        if message.topic == 'system-sensors/switch/{}/reboot'.format(self.settings['device_name']):
+            if message.payload == b'ON':
+                self.logger.info('Reboot command')
+                system('reboot')
+
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
             self.logger.debug('Connection to MQTT broker successful')
             self.mqtt_send_config()
             self.logger.debug('Sent config to MQTT broker')
+            self.publish_timer.start()
+            (result, mid) = self.mqtt_client.subscribe('system-sensors/switch/{}/reboot'.format(self.settings['device_name']))
+            if result == mqtt.MQTT_ERR_SUCCESS:
+                self.logger.debug('Successfully subscribed to reboot topic')
+            else:
+                self.logger.error('Error subscribe to reboot topic')
         elif rc == 1:
             self.logger.error('Connection to MQTT broker refused. Incorrect protocol version')
             self.stop()
@@ -178,6 +210,8 @@ class MainProcess(object):
 
     def on_disconnect(self, client, userdata, rc):
         self.logger.debug('Disconnected from MQTT broker. {}'.format(rc))
+        self.publish_timer.cancel()
+        self.mqtt_client.unsubscribe('system-sensors/switch/{}/reboot'.format(self.settings['device_name']))
 
     def mqtt_publish_timer(self):
         self.mqtt_update_sensors()
@@ -187,10 +221,12 @@ class MainProcess(object):
         self.publish_timer.start()
 
     def run(self):
+        self.publish_timer = Timer(self.settings['update_interval'], self.mqtt_publish_timer)
         self.mqtt_client = mqtt.Client(client_id=self.settings['client_id'])
         self.mqtt_client.username_pw_set(self.settings['mqtt']['user'], self.settings['mqtt']['password'])
         self.mqtt_client.on_connect = self.on_connect
         self.mqtt_client.on_disconnect = self.on_disconnect
+        self.mqtt_client.on_message = self.on_message
         self.logger.info('Connecting to MQTT broker on host {}:{}'.format(self.settings['mqtt']['hostname'],
                                                                           self.settings['mqtt']['port']))
         self.is_run = True
@@ -198,8 +234,6 @@ class MainProcess(object):
         self.logger.info('Connected to MQTT broker on host {}:{}'.format(self.settings['mqtt']['hostname'],
                                                                          self.settings['mqtt']['port']))
         self.mqtt_client.loop_start()
-        self.publish_timer = Timer(self.settings['update_interval'], self.mqtt_publish_timer)
-        self.publish_timer.start()
         while self.is_run:
             time.sleep(1)
 
