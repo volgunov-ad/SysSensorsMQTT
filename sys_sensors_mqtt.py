@@ -69,21 +69,23 @@ class MainProcess(object):
         return str(psutil.virtual_memory().percent)
 
     def mqtt_send_config(self):
-        retain = False
+        retain = True
+        device_payload = {'device': {
+            'identifiers': ['{}_sensor'.format(self.settings['device_name'].lower())],
+            'name': '{}_sensors'.format(self.settings['device_name'].lower()),
+            'model': self.settings['model'],
+            'manufacturer': self.settings['manufacturer']
+        }
+        }
         # SOC temperature.
-        payload = {'name': '{}_soc_temperature'.format(self.settings['device_name']),
+        payload = {'name': '{} SOC temperature'.format(self.settings['device_name']),
                    'state_topic': 'system-sensors/sensor/{}/state'.format(self.settings['device_name']),
                    'device_class': 'temperature',
                    'unit_of_measurement': '°C',
                    'value_template': '{{ value_json.soc_temperature }}',
-                   'unique_id': '{}_sensor_soc_temperature'.format(self.settings['device_name'].lower()),
-                   'device': {
-                     'identifiers': ['{}_sensor'.format(self.settings['device_name'].lower())],
-                     'name': '{}_sensors'.format(self.settings['device_name'].lower()),
-                     'model': self.settings['model'],
-                     'manufacturer': self.settings['manufacturer']
-                 }
+                   'unique_id': '{}_sensor_soc_temperature'.format(self.settings['device_name'].lower())
                    }
+        payload.update(device_payload)
         self.mqtt_client.publish(
             topic='homeassistant/sensor/{0}/soc_temperature/config'.format(self.settings['device_name']),
             payload=json.dumps(payload),
@@ -95,40 +97,30 @@ class MainProcess(object):
         for disk in psutil.disk_partitions():
             self.disks.append(disk.mountpoint)
         for disk in self.disks:
-            disk = disk.replace('/', '_')
-            payload = {'name': '{}_disk_use_{}'.format(self.settings['device_name'], disk),
+            disk_ = disk.replace('/', '_')
+            payload = {'name': '{} disk use {}'.format(self.settings['device_name'], disk),
                        'state_topic': 'system-sensors/sensor/{}/state'.format(self.settings['device_name']),
                        'unit_of_measurement': '%',
                        'icon': 'mdi:harddisk',
-                       'value_template': '{{{{ value_json.disk_use_{} }}}}'.format(disk),
-                       'unique_id': '{0}_sensor_disk_use_{1}'.format(self.settings['device_name'].lower(), disk),
-                       'device': {
-                           'identifiers': ['{}_sensor'.format(self.settings['device_name'].lower())],
-                           'name': '{}_sensors'.format(self.settings['device_name'].lower()),
-                           'model': self.settings['model'],
-                           'manufacturer': self.settings['manufacturer']
+                       'value_template': '{{{{ value_json.disk_use_{} }}}}'.format(disk_),
+                       'unique_id': '{0}_sensor_disk_use_{1}'.format(self.settings['device_name'].lower(), disk_)
                        }
-                       }
+            payload.update(device_payload)
             self.mqtt_client.publish(
-                topic='homeassistant/sensor/{0}/disk_use_{1}/config'.format(self.settings['device_name'], disk),
+                topic='homeassistant/sensor/{0}/disk_use_{1}/config'.format(self.settings['device_name'], disk_),
                 payload=json.dumps(payload),
                 qos=1,
                 retain=retain
             )
         # Memory use.
-        payload = {'name': '{}_memory_use'.format(self.settings['device_name']),
+        payload = {'name': '{} memory use'.format(self.settings['device_name']),
                    'state_topic': 'system-sensors/sensor/{}/state'.format(self.settings['device_name']),
                    'unit_of_measurement': '%',
                    'icon': 'mdi:memory',
                    'value_template': '{{ value_json.memory_use }}',
-                   'unique_id': '{}_sensor_memory_use'.format(self.settings['device_name'].lower()),
-                   'device': {
-                       'identifiers': ['{}_sensor'.format(self.settings['device_name'].lower())],
-                       'name': '{}_sensors'.format(self.settings['device_name'].lower()),
-                       'model': self.settings['model'],
-                       'manufacturer': self.settings['manufacturer']
+                   'unique_id': '{}_sensor_memory_use'.format(self.settings['device_name'].lower())
                    }
-                   }
+        payload.update(device_payload)
         self.mqtt_client.publish(
             topic='homeassistant/sensor/{0}/memory_use/config'.format(self.settings['device_name']),
             payload=json.dumps(payload),
@@ -137,18 +129,13 @@ class MainProcess(object):
         )
         # Last boot.
         payload = {'device_class': 'timestamp',
-                   'name': '{}_last_boot'.format(self.settings['device_name']),
+                   'name': '{} last boot'.format(self.settings['device_name']),
                    'state_topic': 'system-sensors/sensor/{}/state'.format(self.settings['device_name']),
                    'icon': 'mdi:clock-start',
                    'value_template': '{{ value_json.last_boot }}',
-                   'unique_id': '{}_sensor_last_boot'.format(self.settings['device_name'].lower()),
-                   'device': {
-                       'identifiers': ['{}_sensor'.format(self.settings['device_name'].lower())],
-                       'name': '{}_sensors'.format(self.settings['device_name'].lower()),
-                       'model': self.settings['model'],
-                       'manufacturer': self.settings['manufacturer']
+                   'unique_id': '{}_sensor_last_boot'.format(self.settings['device_name'].lower())
                    }
-                   }
+        payload.update(device_payload)
         self.mqtt_client.publish(
             topic='homeassistant/sensor/{0}/last_boot/config'.format(self.settings['device_name']),
             payload=json.dumps(payload),
