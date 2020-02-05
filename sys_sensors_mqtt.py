@@ -162,7 +162,7 @@ class MainProcess(object):
             self.mqtt_client.publish(topic='system-sensors/switch/{}/reboot'.format(self.settings['device_name']),
                                      payload='OFF', qos=1, retain=False)
             # Shutdown switch.
-            payload = {'name': '{} reboot'.format(self.settings['device_name']),
+            payload = {'name': '{} sutdown'.format(self.settings['device_name']),
                        'state_topic': 'system-sensors/switch/{}/shutdown'.format(self.settings['device_name']),
                        'command_topic': 'system-sensors/switch/{}/shutdown'.format(self.settings['device_name']),
                        'icon': 'mdi:power',

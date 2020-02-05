@@ -23,6 +23,7 @@ Tested only on Vero 4K.
 
 * Install pip:
   * sudo apt-get install python3-pip
+
 * Install additional packages:
   * sudo apt-get install gcc python3-dev (maybe build-essential)
   * sudo pip3 install setuptools
@@ -36,14 +37,18 @@ Tested only on Vero 4K.
   * cd /home/osmc/SysSensorsMQTT
 * Set the necessary settings in the settings.yaml file:
   * nano settings.yaml
+  
 * Edit the sys_sensors_mqtt.service file:
   * nano sys_sensors_mqtt.service
   * set in the line "WorkingDirectory=/home/osmc/SysSensorsMQTT" the correct path to the newly copied files
   * do the same in the line "ExecStart=/home/osmc/SysSensorsMQTT/sys_sensors_mqtt_daemon.py", leave /sys_sensors_mqtt_daemon.py
+
 * Transfer the service file to the UNIX system (just in case):
   * sudo dos2unix sys_sensors_mqtt_daemon.py
+
 * Make the service file executable:
   * sudo chmod u+x sys_sensors_mqtt_daemon.py
+
 * Enable service:
   * sudo cp sys_sensors_mqtt.service /etc/systemd/system
   * sudo systemctl daemon-reload
