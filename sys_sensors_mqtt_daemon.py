@@ -118,25 +118,21 @@ if __name__ == "__main__":
 
     formatter = logging.Formatter('%(filename)-25s|%(lineno)4d|%(levelname)-7s|%(asctime)-23s|%(message)s')
 
-    handler_infos = logging.handlers.RotatingFileHandler("/var/log/sys_sensors_mqtt_info.log", maxBytes=1000000,
+    handler_infos = logging.handlers.RotatingFileHandler("/var/log/sys_sensors_mqtt.log", maxBytes=1000000,
                                                          backupCount=1)
     handler_infos.setFormatter(formatter)
 
-    handler_warnings = logging.handlers.RotatingFileHandler("/var/log/sys_sensors_mqtt_error.log", maxBytes=500000,
-                                                            backupCount=1)
-    handler_warnings.setFormatter(formatter)
-    handler_warnings.setLevel(logging.WARNING)
-
     logger.addHandler(handler_infos)
-    logger.addHandler(handler_warnings)
 
     settings = Settings(logger)
     settings.read_settings()
 
     if settings.settings['logging_level'] == 'DEBUG':
         handler_infos.setLevel(logging.DEBUG)
-    else:
+    elif settings.settings['logging_level'] == 'INFO':
         handler_infos.setLevel(logging.INFO)
+    else:
+        handler_infos.setLevel(logging.ERROR)
 
     app = App(logger, settings.settings)
 

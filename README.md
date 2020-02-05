@@ -15,7 +15,7 @@ The MQTT client also receive reboot command, that reboot system.
 When the client is turned on, if it does not detect the MQTT broker at the specified address,
 the client continues to try connect every minute.
 
-The client logs 2 logs in the /var/log path: sys_sensors_mqtt_info.log and sys_sensors_mqtt_error.log. Logs has rotation (max 1 MB, 1 back file)
+The client log is in the /var/log path: sys_sensors_mqtt.log. Logs has rotation (max 1 MB, 1 back file)
 
 Tested only on Vero 4K.
 
