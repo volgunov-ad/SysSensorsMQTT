@@ -207,6 +207,7 @@ class MainProcess(object):
             self.logger.debug('Connection to MQTT broker successful')
             self.mqtt_send_config()
             self.logger.debug('Sent config to MQTT broker')
+            self.publish_timer = Timer(self.settings['update_interval'], self.mqtt_publish_timer)
             self.publish_timer.start()
             if self.settings['reboot/shutdown']:
                 # Subscribe reboot topic.
@@ -251,7 +252,6 @@ class MainProcess(object):
         self.publish_timer.start()
 
     def run(self):
-        self.publish_timer = Timer(self.settings['update_interval'], self.mqtt_publish_timer)
         self.mqtt_client = mqtt.Client(client_id=self.settings['client_id'])
         self.mqtt_client.username_pw_set(self.settings['mqtt']['user'], self.settings['mqtt']['password'])
         self.mqtt_client.on_connect = self.on_connect
