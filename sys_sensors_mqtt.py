@@ -207,7 +207,7 @@ class MainProcess(object):
             self.logger.debug('Connection to MQTT broker successful')
             self.mqtt_send_config()
             self.logger.debug('Sent config to MQTT broker')
-            self.publish_timer = Timer(self.settings['update_interval'], self.mqtt_publish_timer)
+            self.publish_timer = Timer(30, self.mqtt_publish_timer)
             self.publish_timer.start()
             if self.settings['reboot/shutdown']:
                 # Subscribe reboot topic.
