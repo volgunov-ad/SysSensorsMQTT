@@ -1,5 +1,6 @@
 [Unit]
 Description=SysSensorsMQTT
+After=network.target
 
 [Service]
 Type=idle
