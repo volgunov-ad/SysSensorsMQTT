@@ -47,12 +47,19 @@ class Settings(object):
         else:
             if self.settings['reboot/shutdown'] is not True:
                 self.settings['reboot/shutdown'] = False
+        if 'log_file' not in self.settings:
+            self.settings['log_file'] = '/var/log/sys_sensors_mqtt.log'
+        else:
+            if self.settings['log_file'] == '':
+                self.settings['log_file'] = '/var/log/sys_sensors_mqtt.log'
 
     def read_settings(self):
-        with open('settings.yaml') as f:
-            try:
-                self.settings = yaml.safe_load(f)
-            except yaml.YAMLError:
-                self.logger.info('Some error in settings file')
-                self.settings = {}
+        try:
+            with open('settings.yaml') as f:
+                try:
+                    self.settings = yaml.safe_load(f)
+                except yaml.YAMLError:
+                    self.settings = {}
+        except FileNotFoundError:
+            self.settings = {}
         self.check_settings()

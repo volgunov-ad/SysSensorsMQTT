@@ -50,8 +50,11 @@ class MainProcess(object):
     def get_temp(self):
         # TODO: Add Raspberry Pi support
         self.logger.debug('Get SOC temperature')
-        temp = '-'
-        temps = psutil.sensors_temperatures()
+        temp = '-1'
+        try:
+            temps = psutil.sensors_temperatures()
+        except AttributeError:
+            temps = {}
         if 'soc_thermal' in temps.keys():
             temp = str(temps['soc_thermal'][0].current)
         return temp
@@ -61,8 +64,12 @@ class MainProcess(object):
         disks_payload = {}
         for disk in psutil.disk_partitions():
             if disk.mountpoint in self.disks:
+                try:
+                    disk_usage = str(psutil.disk_usage(disk.mountpoint).percent)
+                except PermissionError:
+                    disk_usage = '-1'
                 disks_payload.update({
-                    'disk_use_{}'.format(disk.mountpoint).replace('/', '_'): str(psutil.disk_usage(disk.mountpoint).percent)
+                    'disk_use_{}'.format(disk.mountpoint).replace('/', '_'): str(disk_usage)
                 })
         return disks_payload
 

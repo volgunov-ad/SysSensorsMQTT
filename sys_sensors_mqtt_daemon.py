@@ -63,14 +63,13 @@ if __name__ == "__main__":
 
     formatter = logging.Formatter('%(filename)-25s|%(lineno)4d|%(levelname)-7s|%(asctime)-23s|%(message)s')
 
-    handler_infos = logging.handlers.RotatingFileHandler("/var/log/sys_sensors_mqtt.log", maxBytes=1000000,
-                                                         backupCount=1)
+    settings = Settings(logger)
+    settings.read_settings()
+
+    handler_infos = logging.handlers.RotatingFileHandler(settings.settings['log_file'], maxBytes=1000000, backupCount=1)
     handler_infos.setFormatter(formatter)
 
     logger.addHandler(handler_infos)
-
-    settings = Settings(logger)
-    settings.read_settings()
 
     if settings.settings['logging_level'] == 'DEBUG':
         handler_infos.setLevel(logging.DEBUG)

@@ -11,3 +11,4 @@ manufacturer: manufacturer
 model: model
 logging_level: INFO
 reboot/shutdown: False
+log_file: log.txt
