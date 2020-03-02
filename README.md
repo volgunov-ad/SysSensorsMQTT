@@ -27,10 +27,7 @@ Tested only on Vero 4K.
 * Install additional packages:
   * sudo apt-get install gcc python3-dev (maybe build-essential)
   * sudo pip3 install setuptools
-  * sudo pip3 install pyyaml
-  * sudo pip3 install psutil
-  * sudo pip3 install paho-mqtt
-  * sudo pip3 install pytz
+  * sudo pip3 install -r requirements.txt
 
 * Copy client files to the desired path, for example, /home/osmc/SysSensorsMQTT
 * Go to the created path:
