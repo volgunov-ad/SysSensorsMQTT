@@ -17,7 +17,7 @@ the client continues to try connect every minute.
 
 The client log is in the /var/log path: sys_sensors_mqtt.log. Logs has rotation (max 1 MB, 1 back file)
 
-Tested only on Vero 4K.
+Tested only on Vero 4K and Banana Pi M1+.
 
 <h3>INSTALLATION</h3>
 
