@@ -57,6 +57,8 @@ class MainProcess(object):
             temps = {}
         if 'soc_thermal' in temps.keys():
             temp = str(temps['soc_thermal'][0].current)
+        elif 'sun4i_ts' in temps.keys():
+            temp = str(temps['sun4i_ts'][0].current)
         return temp
 
     def get_disk_usage(self):
