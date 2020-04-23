@@ -15,7 +15,7 @@ The MQTT client also receive reboot command, that reboot system.
 When the client is turned on, if it does not detect the MQTT broker at the specified address,
 the client continues to try connect every minute.
 
-The client log is in the /var/log path: sys_sensors_mqtt.log. Logs has rotation (max 1 MB, 1 back file)
+The client log is in the "log_file" path (see settings.yaml). Logs has rotation (max 1 MB, 1 back file)
 
 Tested only on Vero 4K and Banana Pi M1+.
 
@@ -34,6 +34,25 @@ Tested only on Vero 4K and Banana Pi M1+.
   * sudo pip3 install -r requirements.txt
 * Set the necessary settings in the settings.yaml file:
   * nano settings.yaml
+  
+  Parameter | Default | Description
+  --------- | ------- | -----------
+  mqtt: |    | 
+   - hostname | 127.0.0.1 | path to MQTT broker
+   - port | 1883 | MQTT broker port
+   - user | | User name to connecto to MQTT broker
+   - password | | Password to connecto to MQTT broker
+  device_name | device | Device name (any)
+  client_id | client1 | MQTT client ID (any)
+  timezone | Europe/Moscow | Time zone (see [list of pytz time zones](https://gist.github.com/heyalexej/8bf688fd67d7199be4a1682b3eec7568)
+  update_interval | 300 | Sensors update time interval (integer)
+  manufacturer | manufacturer | Device manufacturer (any)
+  model | model | Device model (any)
+  logging_level | INFO | Log level: INFO, DEBUG, ERROR
+  reboot/shutdown | False | Subscribe to reboot and shutdown topics? True/False
+  log_file | /var/log/sys_sensors_mqtt.log | Path to log file (full or relative)
+  homeassistant | False | Transfer configuration to topic "homeassistant"? True/False
+  topic | devices | Topic to publish state
   
 * Edit the sys_sensors_mqtt.service file:
   * nano sys_sensors_mqtt.service
