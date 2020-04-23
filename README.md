@@ -10,7 +10,7 @@ The MQTT client sends the following data to the MQTT broker with the specified f
 
 The MQTT client also receive reboot command, that reboot system. 
 
-![lovelace card](/images/image1.png)
+![lovelace card](images/image1.png)
 
 When the client is turned on, if it does not detect the MQTT broker at the specified address,
 the client continues to try connect every minute.

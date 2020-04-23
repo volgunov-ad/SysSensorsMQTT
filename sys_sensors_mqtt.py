@@ -42,6 +42,9 @@ class MainProcess(object):
         payload = {"memory_use": self.get_memory_usage(),
                    "last_boot": self.get_last_boot(),
                    }
+        if self.update_disks_list():
+            if self.settings['homeassistant']:
+                self.mqtt_send_config()
         payload.update(self.get_disk_usage())
         payload.update({"soc_temperature": self.get_temp()})
         self.mqtt_client.publish(topic='{}/{}/state'.format(self.settings['topic'], self.settings['device_name']),
@@ -60,6 +63,14 @@ class MainProcess(object):
         elif 'sun4i_ts' in temps.keys():
             temp = str(temps['sun4i_ts'][0].current)
         return temp
+
+    def update_disks_list(self):
+        update_config = False
+        for disk in psutil.disk_partitions():
+            if disk.mountpoint not in self.disks:
+                self.disks.append(disk.mountpoint)
+                update_config = True
+        return update_config
 
     def get_disk_usage(self):
         self.logger.debug('Get disks usage')
@@ -104,9 +115,6 @@ class MainProcess(object):
             retain=retain
         )
         # Disks use.
-        self.disks = []
-        for disk in psutil.disk_partitions():
-            self.disks.append(disk.mountpoint)
         for disk in self.disks:
             disk_ = disk.replace('/', '_')
             payload = {'name': '{} disk use {}'.format(self.settings['device_name'], disk),
@@ -215,6 +223,7 @@ class MainProcess(object):
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
             self.logger.debug('Connection to MQTT broker successful')
+            self.update_disks_list()
             if self.settings['homeassistant']:
                 self.mqtt_send_config()
                 self.logger.debug('Sent config to MQTT broker')
