@@ -82,6 +82,16 @@ class Settings(object):
         else:
             if self.settings['log_file'] is None:
                 self.settings['log_file'] = '/var/log/sys_sensors_mqtt.log'
+        if 'homeassistant' not in self.settings:
+            self.settings['homeassistant'] = False
+        else:
+            if self.settings['homeassistant'] is not True:
+                self.settings['homeassistant'] = False
+        if 'topic' not in self.settings:
+            self.settings['topic'] = 'devices'
+        else:
+            if self.settings['topic'] is None:
+                self.settings['topic'] = 'devices'
 
     def read_settings(self):
         try:

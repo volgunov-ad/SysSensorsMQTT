@@ -44,7 +44,7 @@ class MainProcess(object):
                    }
         payload.update(self.get_disk_usage())
         payload.update({"soc_temperature": self.get_temp()})
-        self.mqtt_client.publish(topic='system-sensors/sensor/{}/state'.format(self.settings['device_name']),
+        self.mqtt_client.publish(topic='{}/{}/state'.format(self.settings['topic'], self.settings['device_name']),
                                  payload=json.dumps(payload), qos=1, retain=False)
 
     def get_temp(self):
@@ -90,7 +90,7 @@ class MainProcess(object):
         }
         # SOC temperature.
         payload = {'name': '{} SOC temperature'.format(self.settings['device_name']),
-                   'state_topic': 'system-sensors/sensor/{}/state'.format(self.settings['device_name']),
+                   'state_topic': '{}/{}/state'.format(self.settings['topic'], self.settings['device_name']),
                    'device_class': 'temperature',
                    'unit_of_measurement': '°C',
                    'value_template': '{{ value_json.soc_temperature }}',
@@ -110,7 +110,7 @@ class MainProcess(object):
         for disk in self.disks:
             disk_ = disk.replace('/', '_')
             payload = {'name': '{} disk use {}'.format(self.settings['device_name'], disk),
-                       'state_topic': 'system-sensors/sensor/{}/state'.format(self.settings['device_name']),
+                       'state_topic': '{}/{}/state'.format(self.settings['topic'], self.settings['device_name']),
                        'unit_of_measurement': '%',
                        'icon': 'mdi:harddisk',
                        'value_template': '{{{{ value_json.disk_use_{} }}}}'.format(disk_),
@@ -125,7 +125,7 @@ class MainProcess(object):
             )
         # Memory use.
         payload = {'name': '{} memory use'.format(self.settings['device_name']),
-                   'state_topic': 'system-sensors/sensor/{}/state'.format(self.settings['device_name']),
+                   'state_topic': '{}/{}/state'.format(self.settings['topic'], self.settings['device_name']),
                    'unit_of_measurement': '%',
                    'icon': 'mdi:memory',
                    'value_template': '{{ value_json.memory_use }}',
@@ -141,7 +141,7 @@ class MainProcess(object):
         # Last boot.
         payload = {'device_class': 'timestamp',
                    'name': '{} last boot'.format(self.settings['device_name']),
-                   'state_topic': 'system-sensors/sensor/{}/state'.format(self.settings['device_name']),
+                   'state_topic': '{}/{}/state'.format(self.settings['topic'], self.settings['device_name']),
                    'icon': 'mdi:clock-start',
                    'value_template': '{{ value_json.last_boot }}',
                    'unique_id': '{}_sensor_last_boot'.format(self.settings['device_name'].lower())
@@ -156,8 +156,8 @@ class MainProcess(object):
         if self.settings['reboot/shutdown']:
             # Reboot switch.
             payload = {'name': '{} reboot'.format(self.settings['device_name']),
-                       'state_topic': 'system-sensors/switch/{}/reboot'.format(self.settings['device_name']),
-                       'command_topic': 'system-sensors/switch/{}/reboot'.format(self.settings['device_name']),
+                       'state_topic': '{}/{}/reboot'.format(self.settings['topic'], self.settings['device_name']),
+                       'command_topic': '{}/{}/reboot'.format(self.settings['topic'], self.settings['device_name']),
                        'icon': 'mdi:restart',
                        'unique_id': '{}_reboot'.format(self.settings['device_name'].lower())
                        }
@@ -168,12 +168,12 @@ class MainProcess(object):
                 qos=1,
                 retain=retain
             )
-            self.mqtt_client.publish(topic='system-sensors/switch/{}/reboot'.format(self.settings['device_name']),
+            self.mqtt_client.publish(topic='{}/{}/reboot'.format(self.settings['topic'], self.settings['device_name']),
                                      payload='OFF', qos=1, retain=False)
             # Shutdown switch.
             payload = {'name': '{} sutdown'.format(self.settings['device_name']),
-                       'state_topic': 'system-sensors/switch/{}/shutdown'.format(self.settings['device_name']),
-                       'command_topic': 'system-sensors/switch/{}/shutdown'.format(self.settings['device_name']),
+                       'state_topic': '{}/{}/shutdown'.format(self.settings['topic'], self.settings['device_name']),
+                       'command_topic': '{}/{}/shutdown'.format(self.settings['topic'], self.settings['device_name']),
                        'icon': 'mdi:power',
                        'unique_id': '{}_shutdown'.format(self.settings['device_name'].lower())
                        }
@@ -184,7 +184,8 @@ class MainProcess(object):
                 qos=1,
                 retain=retain
             )
-            self.mqtt_client.publish(topic='system-sensors/switch/{}/shutdown'.format(self.settings['device_name']),
+            self.mqtt_client.publish(topic='{}/{}/shutdown'.format(self.settings['topic'],
+                                                                   self.settings['device_name']),
                                      payload='OFF', qos=1, retain=False)
 
     def mqtt_connect(self):
@@ -202,11 +203,11 @@ class MainProcess(object):
 
     def on_message(self, client, userdata, message):
         self.logger.debug('Message received: {} = {}'.format(message.topic, message.payload))
-        if message.topic == 'system-sensors/switch/{}/reboot'.format(self.settings['device_name']):
+        if message.topic == '{}/{}/reboot'.format(self.settings['topic'], self.settings['device_name']):
             if message.payload == b'ON':
                 self.logger.info('Reboot command')
                 system('reboot')
-        elif message.topic == 'system-sensors/switch/{}/shutdown'.format(self.settings['device_name']):
+        elif message.topic == '{}}/{}/shutdown'.format(self.settings['topic'], self.settings['device_name']):
             if message.payload == b'ON':
                 self.logger.info('Shutdown command')
                 system('shutdown now -h')
@@ -214,20 +215,22 @@ class MainProcess(object):
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
             self.logger.debug('Connection to MQTT broker successful')
-            self.mqtt_send_config()
-            self.logger.debug('Sent config to MQTT broker')
+            if self.settings['homeassistant']:
+                self.mqtt_send_config()
+                self.logger.debug('Sent config to MQTT broker')
             self.publish_timer = Timer(30, self.mqtt_publish_timer)
             self.publish_timer.start()
             if self.settings['reboot/shutdown']:
                 # Subscribe reboot topic.
-                (result, mid) = self.mqtt_client.subscribe('system-sensors/switch/{}/reboot'.format(self.settings['device_name']))
+                (result, mid) = self.mqtt_client.subscribe('{}/{}/reboot'.format(self.settings['topic'],
+                                                                                 self.settings['device_name']))
                 if result == mqtt.MQTT_ERR_SUCCESS:
                     self.logger.debug('Successfully subscribed to reboot topic')
                 else:
                     self.logger.error('Error subscribe to reboot topic')
                 # Subscribe shutdown topic.
-                (result, mid) = self.mqtt_client.subscribe(
-                    'system-sensors/switch/{}/shutdown'.format(self.settings['device_name']))
+                (result, mid) = self.mqtt_client.subscribe('{}/{}/shutdown'.format(self.settings['topic'],
+                                                                                   self.settings['device_name']))
                 if result == mqtt.MQTT_ERR_SUCCESS:
                     self.logger.debug('Successfully subscribed to shutdown topic')
                 else:
@@ -251,7 +254,8 @@ class MainProcess(object):
         self.logger.debug('Disconnected from MQTT broker. {}'.format(rc))
         self.publish_timer.cancel()
         if self.settings['reboot/shutdown']:
-            self.mqtt_client.unsubscribe('system-sensors/switch/{}/reboot'.format(self.settings['device_name']))
+            self.mqtt_client.unsubscribe('{}/{}/reboot'.format(self.settings['topic'], self.settings['device_name']))
+            self.mqtt_client.unsubscribe('{}/{}/shutdown'.format(self.settings['topic'], self.settings['device_name']))
 
     def mqtt_publish_timer(self):
         self.mqtt_update_sensors()
