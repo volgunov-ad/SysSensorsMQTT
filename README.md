@@ -37,11 +37,10 @@ Tested only on Vero 4K and Banana Pi M1+.
   
   Parameter | Default | Description
   --------- | ------- | -----------
-  mqtt: |    | 
-   - hostname | 127.0.0.1 | path to MQTT broker
-   - port | 1883 | MQTT broker port
-   - user | | User name to connecto to MQTT broker
-   - password | | Password to connecto to MQTT broker
+  hostname | 127.0.0.1 | path to MQTT broker
+  port | 1883 | MQTT broker port
+  user | | User name to connecto to MQTT broker
+  password | | Password to connecto to MQTT broker
   device_name | device | Device name (any)
   client_id | client1 | MQTT client ID (any)
   timezone | Europe/Moscow | Time zone (see [list of pytz time zones](https://gist.github.com/heyalexej/8bf688fd67d7199be4a1682b3eec7568)
