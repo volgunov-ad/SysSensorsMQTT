@@ -21,6 +21,8 @@ class MainProcess(object):
         self.mqtt_client = None
         self.is_run = False
         self.publish_timer = Timer(self.settings['update_interval'], self.mqtt_publish_timer)
+        self.identifier = self.settings['device_name'].replace(' ', '_').lower()
+        self.state_topic = '{}/{}/state'.format(self.settings['topic'], self.identifier)
 
     def utc_from_timestamp(self, timestamp: float) -> dt.datetime:
         """Return a UTC time from a timestamp."""
@@ -47,8 +49,7 @@ class MainProcess(object):
                 self.mqtt_send_config()
         payload.update(self.get_disk_usage())
         payload.update({"soc_temperature": self.get_temp()})
-        self.mqtt_client.publish(topic='{}/{}/state'.format(self.settings['topic'], self.settings['device_name']),
-                                 payload=json.dumps(payload), qos=1, retain=False)
+        self.mqtt_client.publish(topic=self.state_topic, payload=json.dumps(payload), qos=1, retain=False)
 
     def get_temp(self):
         # TODO: Add Raspberry Pi support
@@ -93,23 +94,24 @@ class MainProcess(object):
     def mqtt_send_config(self):
         retain = True
         device_payload = {'device': {
-            'identifiers': ['{}_sensor'.format(self.settings['device_name'].lower())],
-            'name': '{}_sensors'.format(self.settings['device_name'].lower()),
+            'identifiers': ['{}'.format(self.identifier)],
+            'name': '{}'.format(self.settings['device_name']),
             'model': self.settings['model'],
             'manufacturer': self.settings['manufacturer']
         }
         }
         # SOC temperature.
         payload = {'name': '{} SOC temperature'.format(self.settings['device_name']),
-                   'state_topic': '{}/{}/state'.format(self.settings['topic'], self.settings['device_name']),
+                   'state_topic': self.state_topic,
                    'device_class': 'temperature',
                    'unit_of_measurement': '°C',
                    'value_template': '{{ value_json.soc_temperature }}',
-                   'unique_id': '{}_sensor_soc_temperature'.format(self.settings['device_name'].lower())
+                   'unique_id': '{}_sensor_soc_temperature'.format(self.identifier),
+                   'json_attributes_topic': self.state_topic,
                    }
         payload.update(device_payload)
         self.mqtt_client.publish(
-            topic='homeassistant/sensor/{0}/soc_temperature/config'.format(self.settings['device_name']),
+            topic='homeassistant/sensor/{0}/soc_temperature/config'.format(self.identifier),
             payload=json.dumps(payload),
             qos=1,
             retain=retain
@@ -117,83 +119,85 @@ class MainProcess(object):
         # Disks use.
         for disk in self.disks:
             disk_ = disk.replace('/', '_')
-            payload = {'name': '{} disk use {}'.format(self.settings['device_name'], disk),
-                       'state_topic': '{}/{}/state'.format(self.settings['topic'], self.settings['device_name']),
+            payload = {'name': '{} Disk use {}'.format(self.settings['device_name'], disk),
+                       'state_topic': self.state_topic,
                        'unit_of_measurement': '%',
                        'icon': 'mdi:harddisk',
                        'value_template': '{{{{ value_json.disk_use_{} }}}}'.format(disk_),
-                       'unique_id': '{0}_sensor_disk_use_{1}'.format(self.settings['device_name'].lower(), disk_)
+                       'unique_id': '{0}_sensor_disk_use_{1}'.format(self.identifier, disk_),
+                       'json_attributes_topic': self.state_topic,
                        }
             payload.update(device_payload)
             self.mqtt_client.publish(
-                topic='homeassistant/sensor/{0}/disk_use_{1}/config'.format(self.settings['device_name'], disk_),
+                topic='homeassistant/sensor/{0}/disk_use_{1}/config'.format(self.identifier, disk_),
                 payload=json.dumps(payload),
                 qos=1,
                 retain=retain
             )
         # Memory use.
-        payload = {'name': '{} memory use'.format(self.settings['device_name']),
-                   'state_topic': '{}/{}/state'.format(self.settings['topic'], self.settings['device_name']),
+        payload = {'name': '{} Memory use'.format(self.settings['device_name']),
+                   'state_topic': self.state_topic,
                    'unit_of_measurement': '%',
                    'icon': 'mdi:memory',
                    'value_template': '{{ value_json.memory_use }}',
-                   'unique_id': '{}_sensor_memory_use'.format(self.settings['device_name'].lower())
+                   'unique_id': '{}_sensor_memory_use'.format(self.identifier),
+                   'json_attributes_topic': self.state_topic,
                    }
         payload.update(device_payload)
         self.mqtt_client.publish(
-            topic='homeassistant/sensor/{0}/memory_use/config'.format(self.settings['device_name']),
+            topic='homeassistant/sensor/{0}/memory_use/config'.format(self.identifier),
             payload=json.dumps(payload),
             qos=1,
             retain=retain
         )
         # Last boot.
         payload = {'device_class': 'timestamp',
-                   'name': '{} last boot'.format(self.settings['device_name']),
-                   'state_topic': '{}/{}/state'.format(self.settings['topic'], self.settings['device_name']),
+                   'name': '{} Last boot'.format(self.settings['device_name']),
+                   'state_topic': self.state_topic,
                    'icon': 'mdi:clock-start',
                    'value_template': '{{ value_json.last_boot }}',
-                   'unique_id': '{}_sensor_last_boot'.format(self.settings['device_name'].lower())
+                   'unique_id': '{}_sensor_last_boot'.format(self.identifier),
+                   'json_attributes_topic': self.state_topic,
                    }
         payload.update(device_payload)
         self.mqtt_client.publish(
-            topic='homeassistant/sensor/{0}/last_boot/config'.format(self.settings['device_name']),
+            topic='homeassistant/sensor/{0}/last_boot/config'.format(self.identifier),
             payload=json.dumps(payload),
             qos=1,
             retain=retain
         )
         if self.settings['reboot/shutdown']:
             # Reboot switch.
-            payload = {'name': '{} reboot'.format(self.settings['device_name']),
-                       'state_topic': '{}/{}/reboot'.format(self.settings['topic'], self.settings['device_name']),
-                       'command_topic': '{}/{}/reboot'.format(self.settings['topic'], self.settings['device_name']),
+            payload = {'name': '{} Reboot'.format(self.settings['device_name']),
+                       'state_topic': '{}/{}/reboot'.format(self.settings['topic'], self.identifier),
+                       'command_topic': '{}/{}/reboot'.format(self.settings['topic'], self.identifier),
                        'icon': 'mdi:restart',
-                       'unique_id': '{}_reboot'.format(self.settings['device_name'].lower())
+                       'unique_id': '{}_reboot'.format(self.identifier)
                        }
             payload.update(device_payload)
             self.mqtt_client.publish(
-                topic='homeassistant/switch/{0}/reboot/config'.format(self.settings['device_name']),
+                topic='homeassistant/switch/{0}/reboot/config'.format(self.identifier),
                 payload=json.dumps(payload),
                 qos=1,
                 retain=retain
             )
-            self.mqtt_client.publish(topic='{}/{}/reboot'.format(self.settings['topic'], self.settings['device_name']),
+            self.mqtt_client.publish(topic='{}/{}/reboot'.format(self.settings['topic'], self.identifier),
                                      payload='OFF', qos=1, retain=False)
             # Shutdown switch.
-            payload = {'name': '{} sutdown'.format(self.settings['device_name']),
-                       'state_topic': '{}/{}/shutdown'.format(self.settings['topic'], self.settings['device_name']),
-                       'command_topic': '{}/{}/shutdown'.format(self.settings['topic'], self.settings['device_name']),
+            payload = {'name': '{} Shutdown'.format(self.settings['device_name']),
+                       'state_topic': '{}/{}/shutdown'.format(self.settings['topic'], self.identifier),
+                       'command_topic': '{}/{}/shutdown'.format(self.settings['topic'], self.identifier),
                        'icon': 'mdi:power',
-                       'unique_id': '{}_shutdown'.format(self.settings['device_name'].lower())
+                       'unique_id': '{}_shutdown'.format(self.identifier)
                        }
             payload.update(device_payload)
             self.mqtt_client.publish(
-                topic='homeassistant/switch/{0}/shutdown/config'.format(self.settings['device_name']),
+                topic='homeassistant/switch/{0}/shutdown/config'.format(self.identifier),
                 payload=json.dumps(payload),
                 qos=1,
                 retain=retain
             )
-            self.mqtt_client.publish(topic='{}/{}/shutdown'.format(self.settings['topic'],
-                                                                   self.settings['device_name']),
+            self.mqtt_client.publish(topic='{}/{}/shutdown'.format(self.settings['topic'], self.identifier),
                                      payload='OFF', qos=1, retain=False)
 
     def mqtt_connect(self):
@@ -211,11 +215,11 @@ class MainProcess(object):
 
     def on_message(self, client, userdata, message):
         self.logger.debug('Message received: {} = {}'.format(message.topic, message.payload))
-        if message.topic == '{}/{}/reboot'.format(self.settings['topic'], self.settings['device_name']):
+        if message.topic == '{}/{}/reboot'.format(self.settings['topic'], self.identifier):
             if message.payload == b'ON':
                 self.logger.info('Reboot command')
                 system('reboot')
-        elif message.topic == '{}}/{}/shutdown'.format(self.settings['topic'], self.settings['device_name']):
+        elif message.topic == '{}}/{}/shutdown'.format(self.settings['topic'], self.identifier):
             if message.payload == b'ON':
                 self.logger.info('Shutdown command')
                 system('shutdown now -h')
@@ -227,19 +231,19 @@ class MainProcess(object):
             if self.settings['homeassistant']:
                 self.mqtt_send_config()
                 self.logger.debug('Sent config to MQTT broker')
-            self.publish_timer = Timer(30, self.mqtt_publish_timer)
+            self.publish_timer = Timer(10, self.mqtt_publish_timer)
             self.publish_timer.start()
             if self.settings['reboot/shutdown']:
                 # Subscribe reboot topic.
                 (result, mid) = self.mqtt_client.subscribe('{}/{}/reboot'.format(self.settings['topic'],
-                                                                                 self.settings['device_name']))
+                                                                                 self.identifier))
                 if result == mqtt.MQTT_ERR_SUCCESS:
                     self.logger.debug('Successfully subscribed to reboot topic')
                 else:
                     self.logger.error('Error subscribe to reboot topic')
                 # Subscribe shutdown topic.
                 (result, mid) = self.mqtt_client.subscribe('{}/{}/shutdown'.format(self.settings['topic'],
-                                                                                   self.settings['device_name']))
+                                                                                   self.identifier))
                 if result == mqtt.MQTT_ERR_SUCCESS:
                     self.logger.debug('Successfully subscribed to shutdown topic')
                 else:
@@ -263,8 +267,8 @@ class MainProcess(object):
         self.logger.debug('Disconnected from MQTT broker. {}'.format(rc))
         self.publish_timer.cancel()
         if self.settings['reboot/shutdown']:
-            self.mqtt_client.unsubscribe('{}/{}/reboot'.format(self.settings['topic'], self.settings['device_name']))
-            self.mqtt_client.unsubscribe('{}/{}/shutdown'.format(self.settings['topic'], self.settings['device_name']))
+            self.mqtt_client.unsubscribe('{}/{}/reboot'.format(self.settings['topic'], self.identifier))
+            self.mqtt_client.unsubscribe('{}/{}/shutdown'.format(self.settings['topic'], self.identifier))
 
     def mqtt_publish_timer(self):
         self.mqtt_update_sensors()
