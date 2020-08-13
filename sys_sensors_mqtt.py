@@ -261,7 +261,6 @@ class MainProcess(object):
             self.stop()
         elif rc == 5:
             self.logger.error('Connection to MQTT broker refused. Not authorised')
-            self.stop()
 
     def on_disconnect(self, client, userdata, rc):
         self.logger.debug('Disconnected from MQTT broker. {}'.format(rc))
