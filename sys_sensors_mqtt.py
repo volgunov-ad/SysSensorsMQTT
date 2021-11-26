@@ -80,10 +80,15 @@ class MainProcess(object):
             if disk.mountpoint in self.disks:
                 try:
                     disk_usage = str(psutil.disk_usage(disk.mountpoint).percent)
+                    disk_total = str(psutil.disk_usage(disk.mountpoint).total / 1048576)
                 except PermissionError:
-                    disk_usage = '-1'
+                    disk_usage = '0'
+                    disk_total = '0'
+                disk_ = disk.mountpoint.replace('/', '_')
+                disk_ = disk_.replace(':\\', '')
                 disks_payload.update({
-                    'disk_use_{}'.format(disk.mountpoint).replace('/', '_'): str(disk_usage)
+                    'disk_use_{}'.format(disk_): str(disk_usage),
+                    'disk_total_{}'.format(disk_): str(disk_total),
                 })
         return disks_payload
 
@@ -116,10 +121,11 @@ class MainProcess(object):
             qos=1,
             retain=retain
         )
-        # Disks use.
+        # Disks use and total.
         for disk in self.disks:
             disk_ = disk.replace('/', '_')
-            payload = {'name': '{} Disk use {}'.format(self.settings['device_name'], disk),
+            disk_ = disk_.replace(':\\', '')
+            payload = {'name': '{} Disk use {}'.format(self.settings['device_name'], disk_),
                        'state_topic': self.state_topic,
                        'unit_of_measurement': '%',
                        'icon': 'mdi:harddisk',
@@ -130,6 +136,21 @@ class MainProcess(object):
             payload.update(device_payload)
             self.mqtt_client.publish(
                 topic='homeassistant/sensor/{0}/disk_use_{1}/config'.format(self.identifier, disk_),
+                payload=json.dumps(payload),
+                qos=1,
+                retain=retain
+            )
+            payload = {'name': '{} Disk total {}'.format(self.settings['device_name'], disk_),
+                       'state_topic': self.state_topic,
+                       'unit_of_measurement': 'MB',
+                       'icon': 'mdi:harddisk',
+                       'value_template': '{{{{ value_json.disk_total_{} }}}}'.format(disk_),
+                       'unique_id': '{0}_sensor_disk_total_{1}'.format(self.identifier, disk_),
+                       'json_attributes_topic': self.state_topic,
+                       }
+            payload.update(device_payload)
+            self.mqtt_client.publish(
+                topic='homeassistant/sensor/{0}/disk_total_{1}/config'.format(self.identifier, disk_),
                 payload=json.dumps(payload),
                 qos=1,
                 retain=retain
