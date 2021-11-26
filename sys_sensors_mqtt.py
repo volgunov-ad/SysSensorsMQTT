@@ -47,12 +47,13 @@ class MainProcess(object):
         if self.update_disks_list():
             if self.settings['homeassistant']:
                 self.mqtt_send_config()
-        payload.update(self.get_disk_usage())
+        payload.update(self.get_disks())
         payload.update({"soc_temperature": self.get_temp()})
         self.mqtt_client.publish(topic=self.state_topic, payload=json.dumps(payload), qos=1, retain=False)
+        self.mqtt_client.publish(topic='{}/{}/force_update'.format(self.settings['topic'], self.identifier),
+                                 payload=b'OFF')
 
     def get_temp(self):
-        # TODO: Add Raspberry Pi support
         self.logger.debug('Get SOC temperature')
         temp = '-1'
         try:
@@ -63,6 +64,8 @@ class MainProcess(object):
             temp = str(temps['soc_thermal'][0].current)
         elif 'sun4i_ts' in temps.keys():
             temp = str(temps['sun4i_ts'][0].current)
+        elif 'cpu_thermal' in temps.keys():
+            temp = str(temps['cpu_thermal'][0].current)
         return temp
 
     def update_disks_list(self):
@@ -73,14 +76,14 @@ class MainProcess(object):
                 update_config = True
         return update_config
 
-    def get_disk_usage(self):
-        self.logger.debug('Get disks usage')
+    def get_disks(self):
+        self.logger.debug('Get disks usage and total')
         disks_payload = {}
         for disk in psutil.disk_partitions():
             if disk.mountpoint in self.disks:
                 try:
                     disk_usage = str(psutil.disk_usage(disk.mountpoint).percent)
-                    disk_total = str(psutil.disk_usage(disk.mountpoint).total / 1048576)
+                    disk_total = '{0:.1f}'.format(psutil.disk_usage(disk.mountpoint).total / 1048576)
                 except PermissionError:
                     disk_usage = '0'
                     disk_total = '0'
@@ -113,6 +116,7 @@ class MainProcess(object):
                    'value_template': '{{ value_json.soc_temperature }}',
                    'unique_id': '{}_sensor_soc_temperature'.format(self.identifier),
                    'json_attributes_topic': self.state_topic,
+                   'expire_after': self.settings['update_interval'] + 120,
                    }
         payload.update(device_payload)
         self.mqtt_client.publish(
@@ -132,6 +136,7 @@ class MainProcess(object):
                        'value_template': '{{{{ value_json.disk_use_{} }}}}'.format(disk_),
                        'unique_id': '{0}_sensor_disk_use_{1}'.format(self.identifier, disk_),
                        'json_attributes_topic': self.state_topic,
+                       'expire_after': self.settings['update_interval'] + 120,
                        }
             payload.update(device_payload)
             self.mqtt_client.publish(
@@ -147,6 +152,7 @@ class MainProcess(object):
                        'value_template': '{{{{ value_json.disk_total_{} }}}}'.format(disk_),
                        'unique_id': '{0}_sensor_disk_total_{1}'.format(self.identifier, disk_),
                        'json_attributes_topic': self.state_topic,
+                       'expire_after': self.settings['update_interval'] + 120,
                        }
             payload.update(device_payload)
             self.mqtt_client.publish(
@@ -163,6 +169,7 @@ class MainProcess(object):
                    'value_template': '{{ value_json.memory_use }}',
                    'unique_id': '{}_sensor_memory_use'.format(self.identifier),
                    'json_attributes_topic': self.state_topic,
+                   'expire_after': self.settings['update_interval'] + 120,
                    }
         payload.update(device_payload)
         self.mqtt_client.publish(
@@ -179,6 +186,7 @@ class MainProcess(object):
                    'value_template': '{{ value_json.last_boot }}',
                    'unique_id': '{}_sensor_last_boot'.format(self.identifier),
                    'json_attributes_topic': self.state_topic,
+                   'expire_after': self.settings['update_interval'] + 120,
                    }
         payload.update(device_payload)
         self.mqtt_client.publish(
@@ -187,6 +195,21 @@ class MainProcess(object):
             qos=1,
             retain=retain
         )
+        # Force update switch.
+        payload = {'name': '{} Force update'.format(self.settings['device_name']),
+                   'state_topic': '{}/{}/force_update'.format(self.settings['topic'], self.identifier),
+                   'command_topic': '{}/{}/force_update'.format(self.settings['topic'], self.identifier),
+                   'unique_id': '{}_force_update'.format(self.identifier)
+                   }
+        payload.update(device_payload)
+        self.mqtt_client.publish(
+            topic='homeassistant/switch/{0}/force_update/config'.format(self.identifier),
+            payload=json.dumps(payload),
+            qos=1,
+            retain=retain
+        )
+        self.mqtt_client.publish(topic='{}/{}/force_update'.format(self.settings['topic'], self.identifier),
+                                 payload='OFF', qos=1, retain=False)
         if self.settings['reboot/shutdown']:
             # Reboot switch.
             payload = {'name': '{} Reboot'.format(self.settings['device_name']),
@@ -243,13 +266,21 @@ class MainProcess(object):
                     system('reboot')
                 except:
                     self.logger.error('Error reboot')
-        elif message.topic == '{}}/{}/shutdown'.format(self.settings['topic'], self.identifier):
+        elif message.topic == '{}/{}/shutdown'.format(self.settings['topic'], self.identifier):
             if message.payload == b'ON':
                 self.logger.info('Shutdown command')
                 try:
                     system('shutdown now -h')
                 except:
                     self.logger.error('Error shutdown')
+        elif message.topic == '{}/{}/force_update'.format(self.settings['topic'], self.identifier):
+            if message.payload == b'ON':
+                self.logger.debug('Force update command')
+                try:
+                    self.publish_timer.cancel()
+                except:
+                    self.logger.error('Error cancel publish timer')
+                self.mqtt_publish_timer()
 
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
@@ -260,6 +291,13 @@ class MainProcess(object):
                 self.logger.debug('Sent config to MQTT broker')
             self.publish_timer = Timer(10, self.mqtt_publish_timer)
             self.publish_timer.start()
+            # Subscribe force update topic.
+            (result, mid) = self.mqtt_client.subscribe('{}/{}/force_update'.format(self.settings['topic'],
+                                                                                   self.identifier))
+            if result == mqtt.MQTT_ERR_SUCCESS:
+                self.logger.debug('Successfully subscribed to force update topic')
+            else:
+                self.logger.error('Error subscribe to force update topic')
             if self.settings['reboot/shutdown']:
                 # Subscribe reboot topic.
                 (result, mid) = self.mqtt_client.subscribe('{}/{}/reboot'.format(self.settings['topic'],
