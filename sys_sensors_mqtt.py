@@ -7,6 +7,7 @@ from os import system, popen
 from threading import Timer
 import time
 import fnmatch
+import re
 
 import paho.mqtt.client as mqtt
 import psutil
@@ -90,15 +91,16 @@ class MainProcess(object):
                     data = popen('smartctl -i {}'.format(device))
                     res = data.read().splitlines()
                     for i in range(len(res)):
-                        if 'Device Model' in res[i]:
+                        if 'Serial Number' in res[i]:
                             temp = res[i].split(':')
                             if len(temp) == 2:
-                                if temp[1] not in self.devices.keys():
-                                    self.devices[temp[1]] = device
+                                device_name = re.sub(' +', ' ', temp[1]).replace('-', '_')
+                                if device_name not in self.devices.keys():
+                                    self.devices[device_name] = device
                                     update_config = True
                                 else:
-                                    if self.devices.get(temp[1], '') != device:
-                                        self.devices[temp[1]] = device
+                                    if self.devices.get(device_name, '') != device:
+                                        self.devices[device_name] = device
         except:
             pass
         return update_config
