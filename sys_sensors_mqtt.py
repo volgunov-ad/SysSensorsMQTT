@@ -3,9 +3,10 @@
 
 import datetime as dt
 import json
-from os import system
+from os import system, popen
 from threading import Timer
 import time
+import fnmatch
 
 import paho.mqtt.client as mqtt
 import psutil
@@ -18,6 +19,7 @@ class MainProcess(object):
         self.settings = settings_dict
         self.logger = logger_obj
         self.disks = []
+        self.devices = {}
         self.mqtt_client = None
         self.is_run = False
         self.publish_timer = Timer(self.settings['update_interval'], self.mqtt_publish_timer)
@@ -48,6 +50,7 @@ class MainProcess(object):
             if self.settings['homeassistant']:
                 self.mqtt_send_config()
         payload.update(self.get_disks())
+        payload.update(self.get_devices())
         payload.update({"soc_temperature": self.get_temp()})
         self.mqtt_client.publish(topic=self.state_topic, payload=json.dumps(payload), qos=1, retain=False)
         self.mqtt_client.publish(topic='{}/{}/force_update'.format(self.settings['topic'], self.identifier),
@@ -69,11 +72,33 @@ class MainProcess(object):
         return temp
 
     def update_disks_list(self):
+        self.logger.debug('Update disks and disks devices lists')
         update_config = False
         for disk in psutil.disk_partitions():
             if disk.mountpoint not in self.disks:
                 self.disks.append(disk.mountpoint)
                 update_config = True
+        try:
+            data = popen('smartctl --scan')
+            temp = data.read().split(' ')
+            devices = fnmatch.filter(temp, '/dev/sd*')
+            for device in devices:
+                if len(device) >= 8:
+                    device = device[:8]
+                    data = popen('smartctl -i {}'.format(device))
+                    res = data.read().splitlines()
+                    for i in range(len(res)):
+                        if 'Device Model' in res[i]:
+                            temp = res[i].split(':')
+                            if len(temp) == 2:
+                                if temp[1] not in self.devices.keys():
+                                    self.devices[temp[1]] = device
+                                    update_config = True
+                                else:
+                                    if self.devices.get(temp[1], '') != device:
+                                        self.devices[temp[1]] = device
+        except:
+            pass
         return update_config
 
     def get_disks(self):
@@ -94,6 +119,40 @@ class MainProcess(object):
                     'disk_total_{}'.format(disk_): str(disk_total),
                 })
         return disks_payload
+
+    def get_devices(self):
+        self.logger.debug('Get disks devices SMART')
+        devices_payload = {}
+        for device_name in self.devices.keys():
+            device = self.devices[device_name]
+            try:
+                data = popen('smartctl --attributes {}'.format(device))
+                res = data.read().splitlines()
+                device_attr = {}
+                for i in range(len(res)):
+                    line = res[i].split()
+                    if len(line) >= 10:
+                        if line[1] == 'Temperature_Celsius':
+                            device_attr['temperature'] = line[9]
+                        elif line[1] == 'Power_Cycle_Count':
+                            device_attr['power_cycle_count'] = line[9]
+                        elif line[1] == 'Power_On_Hours':
+                            device_attr['power_on_hours'] = line[9]
+                        elif line[1] == 'Power_On_Hours_and_Msec':
+                            values = line[9].split('+')
+                            if len(values) > 1:
+                                if 'h' in values[0]:
+                                    device_attr['power_on_hours'] = values[0].replace('h', '')
+                if device_attr:
+                    device_name_ = device_name.replace(' ', '_').lower()
+                    devices_payload.update({
+                        'temperature_{}'.format(device_name_): str(device_attr.get('temperature', '-1')),
+                        'power_cycle_count_{}'.format(device_name_): str(device_attr.get('power_cycle_count', '-1')),
+                        'power_on_hours_{}'.format(device_name_): str(device_attr.get('power_on_hours', '-1')),
+                    })
+            except:
+                self.logger.error('Error read SMART data for {}'.format(device_name))
+        return devices_payload
 
     def get_memory_usage(self):
         self.logger.debug('Get memory usage')
@@ -157,6 +216,55 @@ class MainProcess(object):
             payload.update(device_payload)
             self.mqtt_client.publish(
                 topic='homeassistant/sensor/{0}/disk_total_{1}/config'.format(self.identifier, disk_),
+                payload=json.dumps(payload),
+                qos=1,
+                retain=retain
+            )
+        # Devices.
+        for device_name in self.devices.keys():
+            device_name_ = device_name.replace(' ', '_').lower()
+            payload = {'name': '{} {} temperature'.format(self.settings['device_name'], device_name),
+                       'state_topic': self.state_topic,
+                       'unit_of_measurement': '°C',
+                       'device_class': 'temperature',
+                       'value_template': '{{{{ value_json.temperature_{} }}}}'.format(device_name_),
+                       'unique_id': '{0}_sensor_temperature_{1}'.format(self.identifier, device_name_),
+                       'json_attributes_topic': self.state_topic,
+                       'expire_after': self.settings['update_interval'] + 120,
+                       }
+            payload.update(device_payload)
+            self.mqtt_client.publish(
+                topic='homeassistant/sensor/{0}/temperature_{1}/config'.format(self.identifier, device_name_),
+                payload=json.dumps(payload),
+                qos=1,
+                retain=retain
+            )
+            payload = {'name': '{} {} Power Cycle Count'.format(self.settings['device_name'], device_name),
+                       'state_topic': self.state_topic,
+                       'unit_of_measurement': 'i',
+                       'value_template': '{{{{ value_json.power_cycle_count_{} }}}}'.format(device_name_),
+                       'unique_id': '{0}_sensor_power_cycle_count_{1}'.format(self.identifier, device_name_),
+                       'json_attributes_topic': self.state_topic,
+                       'expire_after': self.settings['update_interval'] + 120,
+                       }
+            payload.update(device_payload)
+            self.mqtt_client.publish(
+                topic='homeassistant/sensor/{0}/power_cycle_count_{1}/config'.format(self.identifier, device_name_),
+                payload=json.dumps(payload),
+                qos=1,
+                retain=retain
+            )
+            payload = {'name': '{} {} Power On Hours'.format(self.settings['device_name'], device_name),
+                       'state_topic': self.state_topic,
+                       'unit_of_measurement': 'h',
+                       'value_template': '{{{{ value_json.power_on_hours_{} }}}}'.format(device_name_),
+                       'unique_id': '{0}_sensor_power_on_hours_{1}'.format(self.identifier, device_name_),
+                       'json_attributes_topic': self.state_topic,
+                       'expire_after': self.settings['update_interval'] + 120,
+                       }
+            payload.update(device_payload)
+            self.mqtt_client.publish(
+                topic='homeassistant/sensor/{0}/power_on_hours_{1}/config'.format(self.identifier, device_name_),
                 payload=json.dumps(payload),
                 qos=1,
                 retain=retain
