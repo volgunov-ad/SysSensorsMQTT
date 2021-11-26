@@ -69,6 +69,8 @@ class MainProcess(object):
             temp = str(temps['sun4i_ts'][0].current)
         elif 'cpu_thermal' in temps.keys():
             temp = str(temps['cpu_thermal'][0].current)
+        elif 'cpu0-thermal' in temps.keys():
+            temp = str(temps['cpu0-thermal'][0].current)
         return temp
 
     def update_disks_list(self):
