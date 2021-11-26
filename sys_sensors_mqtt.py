@@ -239,11 +239,17 @@ class MainProcess(object):
         if message.topic == '{}/{}/reboot'.format(self.settings['topic'], self.identifier):
             if message.payload == b'ON':
                 self.logger.info('Reboot command')
-                system('reboot')
+                try:
+                    system('reboot')
+                except:
+                    self.logger.error('Error reboot')
         elif message.topic == '{}}/{}/shutdown'.format(self.settings['topic'], self.identifier):
             if message.payload == b'ON':
                 self.logger.info('Shutdown command')
-                system('shutdown now -h')
+                try:
+                    system('shutdown now -h')
+                except:
+                    self.logger.error('Error shutdown')
 
     def on_connect(self, client, userdata, flags, rc):
         if rc == 0:
