@@ -25,6 +25,7 @@ Tested only on Vero 4K and Banana Pi M1+.
   * sudo apt-get install python3-pip
 
 * Install additional packages:
+  * sudo apt-get install smartmontools 
   * sudo apt-get install gcc python3-dev (maybe build-essential)
   * sudo pip3 install setuptools
 
