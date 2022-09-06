@@ -21,6 +21,9 @@ Tested only on Vero 4K and Banana Pi M1+.
 
 <h3>INSTALLATION</h3>
 
+* Install smartctl:
+  * sudo apt-get install smartmontools
+
 * Install pip:
   * sudo apt-get install python3-pip
 
@@ -44,7 +47,7 @@ Tested only on Vero 4K and Banana Pi M1+.
   password | | Password to connecto to MQTT broker
   device_name | device | Device name (any)
   client_id | client1 | MQTT client ID (any)
-  timezone | Europe/Moscow | Time zone (see [list of pytz time zones](https://gist.github.com/heyalexej/8bf688fd67d7199be4a1682b3eec7568)
+  timezone | Europe/Moscow | Time zone (see [list of pytz time zones](https://gist.github.com/heyalexej/8bf688fd67d7199be4a1682b3eec7568))
   update_interval | 300 | Sensors update time interval (integer)
   manufacturer | manufacturer | Device manufacturer (any)
   model | model | Device model (any)
